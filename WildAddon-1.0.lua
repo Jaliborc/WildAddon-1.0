@@ -1,5 +1,8 @@
 --[[
-A library heavily inspired in AceAddon-3.0, with small behaviour changes and addiional features that I needed and were incompatible with Ace.
+2019 João Cardoso
+
+A library heavily inspired in AceAddon-3.0, with small behavior changes
+and additional features that I needed and were incompatible with Ace.
 ]]--
 
 local Lib = LibStub:NewLibrary('WildAddon-1.0', 1)
