@@ -76,11 +76,10 @@ function Embeds:SetDefaults(target, defaults)
 
   for k, v in pairs(defaults) do
     if type(v) == 'table' then
-      local meta = getmetatable(v)
-      if not meta then
-        target[k] = self:SetDefaults(target[k] or {}, v)
+			if getmetatable(v) == false then
+				target[k] = target[k] or setmetatable(CopyTable(v), {__metatable = false})
 			else
-				target[k] = target[k] or setmetatable(CopyTable(v), meta)
+				target[k] = self:SetDefaults(target[k] or {}, v)
 			end
     end
   end
