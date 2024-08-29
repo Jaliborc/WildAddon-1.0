@@ -1,113 +1,131 @@
 --[[
-2019-2022 João Cardoso
-
-A library heavily inspired in AceAddon-3.0, with small behavior changes
-and additional features that I needed and were incompatible with Ace.
+2019-2024 João Cardoso
+A library inspired in AceAddon-3.0, but that uses the global callback registry
+for events and has behavior changes plus additional features I wanted that were
+incompatible with Ace.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.0', 2)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 1)
 if not Lib then return end
 
 
 --[[ Locals ]]--
 
 local type, tinsert, tremove, pairs = type, tinsert, tremove, pairs
-local Events = LibStub('AceEvent-3.0')
 local Embeds = {}
 
 local function safecall(object, key, ...)
-	if type(object[key]) == 'function' then
-		object[key](object, ...)
-	end
+	local func = object[key]
+	if type(func) == 'function' then
+		func(object, ...)
+	end	
 end
 
 local function embed(object, ...)
-  for i= 1, select('#', ...) do
-    local lib = select(i, ...)
-    if type(lib) == 'string' then
-      lib = LibStub(lib)
-    end
+	for i= 1, select('#', ...) do
+		local lib = select(i, ...)
+		if type(lib) == 'string' then
+			lib = LibStub(lib)
+		end
 
 		if type(lib) == 'table' then
-      safecall(lib, 'Embed', object)
-    end
+			safecall(lib, 'Embed', object)
+		end
 	end
-  return object
+	return object
 end
 
 local function newobject(domain, id, object, ...)
-  if type(object) == 'string' then
-    object = embed({}, Lib, Events, object, ...)
-  else
-    object = embed(object or {}, Lib, Events, ...)
-  end
+	if type(object) == 'string' then
+		object = embed({}, Lib, object, ...)
+	else
+		object = embed(object or {}, Lib, ...)
+	end
 
-  if domain then
-    domain[id] = object
-  end
+	if domain then
+		domain[id] = object
+	end
 
-  tinsert(Lib.Loading, object)
-  return object
+	tinsert(Lib.Loading, object)
+	return object
 end
 
 local function load()
-  if IsLoggedIn() then
-    while (#Lib.Loading > 0) do
-      safecall(tremove(Lib.Loading, 1), 'OnEnable')
-    end
-  end
+	while (#Lib.Loading > 0) do
+		safecall(tremove(Lib.Loading, 1), 'OnLoad')
+	end
 end
 
 Lib.Loading = Lib.Loading or {}
-Events.RegisterEvent(Lib, 'PLAYER_LOGIN', load)
-Events.RegisterEvent(Lib, 'ADDON_LOADED', load)
+EventUtil.RegisterOnceFrameEventAndCallback('PLAYER_LOGIN', function()
+	EventRegistry:RegisterFrameEventAndCallback('ADDON_LOADED', load, Lib)
+	load()
+end)
 
 
 --[[ Addon/Module API ]]--
 
 function Embeds:NewModule(...)
-  local module = newobject(self, ...)
-  module.Tag = self.Tag
-  return module
+	local module = newobject(self, ...)
+	module.Tag = self.Tag
+	return module
+end
+
+function Embeds:RegisterEvent(event, call, ...)
+	EventRegistry:RegisterFrameEventAndCallback(event, self[call] or call, self, ...)
+end
+
+function Embeds:UnregisterEvent(event)
+	EventRegistry:UnregisterFrameEventAndCallback(event, self)
+end
+
+function Embeds:RegisterSignal(event, call, ...)
+	EventRegistry:RegisterCallback(self.Tag .. event, self[call] or call, self, ...)
+end
+
+function Embeds:UnregisterSignal(event)
+	EventRegistry:UnregisterCallback(self.Tag .. event, self)
+end
+
+function Embeds:SendSignal(event, ...)
+	EventRegistry:TriggerEvent(self.Tag .. event, ...)
+end
+
+function Embeds:UnregisterAll()
+	for _, table in pairs(EventRegistry:GetCallbackTables()) do
+		for event, callbacks in pairs(table) do
+			if callbacks[self] then
+				EventRegistry:UnregisterFrameEventAndCallback(event, self)
+			end
+		end
+	end
 end
 
 function Embeds:SetDefaults(target, defaults)
-  defaults.__index = nil
+	defaults.__index = nil
 
-  for k, v in pairs(defaults) do
-    if type(v) == 'table' then
+	for k, v in pairs(defaults) do
+		if type(v) == 'table' then
 			if getmetatable(v) == false then
 				target[k] = target[k] or setmetatable(CopyTable(v), {__metatable = false})
 			else
 				target[k] = self:SetDefaults(target[k] or {}, v)
 			end
-    end
-  end
+		end
+	end
 
-  defaults.__index = defaults
-  return setmetatable(target, defaults)
-end
-  
-function Embeds:RegisterSignal(id, call, ...)
-  self:RegisterMessage(self.Tag .. id, call or id, ...)
-end
-
-function Embeds:UnregisterSignal(id, ...)
-  self:UnregisterMessage(self.Tag .. id, ...)
-end
-
-function Embeds:SendSignal(id, ...)
-  self:SendMessage(self.Tag .. id, ...)
+	defaults.__index = defaults
+	return setmetatable(target, defaults)
 end
 
 
 --[[ Public API ]]--
 
 function Lib:NewAddon(name, ...)
-  local addon = newobject(_G, name, ...)
-  addon.Tag = name:upper() .. '_'
-  addon.Name = name
-  return addon
+	local addon = newobject(_G, name, ...)
+	addon.Tag = name .. '.'
+	addon.Name = name
+	return addon
 end
 
 function Lib:Embed(object)
