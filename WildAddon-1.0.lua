@@ -52,7 +52,9 @@ end
 
 local function load()
 	while (#Lib.Loading > 0) do
-		safecall(tremove(Lib.Loading, 1), 'OnLoad')
+		local module = tremove(Lib.Loading, 1)
+		safecall(module, 'OnLoad')
+		module.OnLoad = nil
 	end
 end
 
@@ -77,6 +79,10 @@ end
 
 function Embeds:UnregisterEvent(event)
 	EventRegistry:UnregisterFrameEventAndCallback(event, self)
+end
+
+function Embeds:ContinueOn(event, call, ...)
+	EventUtil.RegisterOnceFrameEventAndCallback(event, self[call] or call, self, ...)
 end
 
 function Embeds:RegisterSignal(event, call, ...)
