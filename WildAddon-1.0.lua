@@ -74,7 +74,7 @@ function Embeds:NewModule(...)
 end
 
 function Embeds:RegisterEvent(event, call, ...)
-	EventRegistry:RegisterFrameEventAndCallback(event, self[call] or call, self, ...)
+	EventRegistry:RegisterFrameEventAndCallback(event, self[call or event] or call, self, ...)
 end
 
 function Embeds:UnregisterEvent(event)
@@ -82,11 +82,11 @@ function Embeds:UnregisterEvent(event)
 end
 
 function Embeds:ContinueOn(event, call, ...)
-	EventUtil.RegisterOnceFrameEventAndCallback(event, self[call] or call, self, ...)
+	EventUtil.RegisterOnceFrameEventAndCallback(event, self[call or event] or call, self, ...)
 end
 
 function Embeds:RegisterSignal(event, call, ...)
-	EventRegistry:RegisterCallback(self.Tag .. event, self[call] or call, self, ...)
+	EventRegistry:RegisterCallback(self.Tag .. event, self[call or event] or call, self, ...)
 end
 
 function Embeds:UnregisterSignal(event)
