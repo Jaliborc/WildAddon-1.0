@@ -5,7 +5,7 @@ for events and has behavior changes plus additional features I wanted that were
 incompatible with Ace.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.1', 1)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 2)
 if not Lib then return end
 
 
@@ -82,11 +82,11 @@ function Embeds:UnregisterEvent(event)
 end
 
 function Embeds:ContinueOn(event, call, ...)
-	EventUtil.RegisterOnceFrameEventAndCallback(event, self[call or event] or call, self, ...)
+	EventUtil.RegisterOnceFrameEventAndCallback(event, GenerateClosure(self[call or event] or call, self), ...)
 end
 
 function Embeds:RegisterSignal(event, call, ...)
-	EventRegistry:RegisterCallback(self.Tag .. event, self[call or event] or call, self, ...)
+	EventRegistry:RegisterCallback(self.Tag .. event, self[call or event] or call, ...)
 end
 
 function Embeds:UnregisterSignal(event)
